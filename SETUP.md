@@ -77,7 +77,7 @@ passwd
 ```sh
 visudo
 
-web ALL = NOPASSWD: /bin/systemctl status foobar-*.service, NOPASSWD: /bin/systemctl *start foobar-*.service
+web ALL = NOPASSWD: /bin/systemctl status webapp-*-*-*.service, NOPASSWD: /bin/systemctl *start webapp-*-*-*.service
 ```
 
 ###root login remote shell
@@ -120,9 +120,13 @@ npm install -g gulp
 
 ```sh
 cd /www
-mkdir foobar-ui-dev
-mkdir foobar-ui-dev.git
-cd foobar-ui-dev.git
+mkdir webapp
+cd webapp
+mkdir foobar
+cd foobar
+mkdir ui-dev
+mkdir ui-dev.git
+cd ui-dev.git
 git init --bare
 
 cd hooks
@@ -134,16 +138,17 @@ cat > post-receive
 
 ```sh
 #!/bin/sh
-APP=api
+APP=ui
 APPENV=dev
 PROJECT=foobar
 DEPLOY_ALLOWED_BRANCH="master"
 
-APPSTRING="${PROJECT}-${APP}-${APPENV}"
-SERVICE="${APPSTRING}.service"
+APPSTRING="webapp/${PROJECT}/${APP}-${APPENV}"
+SVCSTRING="webapp-${PROJECT}-${APP}-${APPENV}"
+SERVICE="${SVCSTRING}.service"
 SERVICE2="${PROJECT}-queue-${APPENV}.service"
 DEPLOY_ROOT="/www/${APPSTRING}"
-GIT_DIR="${DEPLOY_ROOT}.git"
+GIT_DIR="${DEPLOY_ROOT}.git"   
 
 IP="$(ip addr show eth0 | grep 'inet ' | cut -f2 | awk '{ print $2}')"
 
@@ -159,6 +164,11 @@ export DEPLOY_BRANCH=$(git rev-parse --symbolic --abbrev-ref $refname)
 export DEPLOY_OLDREV="$oldrev"
 export DEPLOY_NEWREV="$newrev"
 export DEPLOY_REFNAME="$refname"
+
+echo "DEPLOY_BRANCH=$(DEPLOY_BRANCH)"
+echo "DEPLOY_OLDREV=$(DEPLOY_OLDREV)"
+echo "DEPLOY_NEWREV=$(DEPLOY_NEWREV)"
+echo "DEPLOY_REFNAME=$(DEPLOY_REFNAME)"
 
 if [ ! -z "${DEPLOY_ALLOWED_BRANCH}" ]; then
     if [ "${DEPLOY_ALLOWED_BRANCH}" != "$DEPLOY_BRANCH" ]; then
@@ -193,9 +203,9 @@ VERSION=`cat ${DEPLOY_ROOT}/package.json | perl -ne 'print $1 if /\"node\"\:\s*\
 #installs if needed and make using of the $VERSION
 nvm install $VERSION
 
-if [ "${NEED_INSTALL}" = "true" ]; then
+if [ ! -d "node_modules" -o "${NEED_INSTALL}" = "true" ]; then
     echo "--------------- NEED REINSTALLING MODULES (package.json changed)-------------------------
-    npm install
+    npm install --production
 else
     echo "Just running build script..."
     npm run-script build
@@ -209,13 +219,13 @@ sleep 3
 echo "Status of ${SERVICE}:"
 sudo /bin/systemctl status $SERVICE
 
-echo "Restarting service ${SERVICE2}..."
-sudo /bin/systemctl restart $SERVICE2
-echo DONE
-echo
-sleep 3
-echo "Status of ${SERVICE2}:"
-sudo /bin/systemctl status $SERVICE2
+#echo "Restarting service ${SERVICE2}..."
+#sudo /bin/systemctl restart $SERVICE2
+#echo DONE
+#echo
+#sleep 3
+#echo "Status of ${SERVICE2}:"
+#sudo /bin/systemctl status $SERVICE2
 
 echo DONE.
 echo
@@ -232,9 +242,6 @@ chmod +x post-receive
 ```
 git remote add dev ssh://web@web.dev.foobar.com/www/foobar-ui-dev.git
 ```
-
-###remotely:
-npm install --production
 
 nginx
 ------------------------------
