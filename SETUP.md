@@ -77,7 +77,7 @@ passwd
 ```sh
 visudo
 
-web ALL = NOPASSWD: /bin/systemctl * foobar-*-dev.service
+web ALL = NOPASSWD: /bin/systemctl status foobar-*.service, NOPASSWD: /bin/systemctl *start foobar-*.service
 ```
 
 ###root login remote shell
@@ -103,11 +103,10 @@ su - web
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git nginx software-properties-common build-essential python-software-properties
-apt-get install gcc-4.8 g++-4.8
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.8
+sudo apt-get install git nginx software-properties-common build-essential python-software-properties gcc-4.8 g++-4.8
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.8
 
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh | bash
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.2/install.sh | bash
 
 . ~/.bashrc
 
@@ -260,7 +259,7 @@ server {
     listen 80;
     listen [::]:80;
 
-    server_name web.dev.piktalk.com;
+    server_name yourserver.com;
 
     location ~ ^/(robots.txt|humans.txt) {
         root /www/foobar-ui-dev/public;
