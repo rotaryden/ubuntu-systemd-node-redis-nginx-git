@@ -110,26 +110,15 @@ curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.2/install.sh | b
 
 . ~/.bashrc
 
-nvm ls-remote
-$NODE_VERSION="5.6.0"
-nvm install $NODE_VERSION
-nvm use $NODE_VERSION
-echo "nvm use $NODE_VERSION" >> ~/.bashrc
+#install latest node, or change to specific version in your package.json
+nvm install node
 
 npm install -g gulp
-```
-
-###this should be sourced or included into dev script:
-
-```sh
-export NVM_DIR="/home/web/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 ```
 
 ##git
 
 ```sh
-mkdir /www
 cd /www
 mkdir foobar-ui-dev
 mkdir foobar-ui-dev.git
@@ -198,6 +187,7 @@ NEED_INSTALL=`git diff-tree --no-commit-id --name-only -r ${DEPLOY_NEWREV} | per
 
 export NVM_DIR="/home/$USER/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+
 VERSION=`cat ${DEPLOY_ROOT}/package.json | perl -ne 'print $1 if /\"node\"\:\s*\"\^([\d\.]+)\"/'`
 
 #installs if needed and make using of the $VERSION
@@ -205,7 +195,6 @@ nvm install $VERSION
 
 if [ "${NEED_INSTALL}" = "true" ]; then
     echo "--------------- NEED REINSTALLING MODULES (package.json changed)-------------------------
-    rm -rf node_modules
     npm install
 else
     echo "Just running build script..."
