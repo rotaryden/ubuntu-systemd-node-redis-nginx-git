@@ -6,7 +6,7 @@ Tested on DigitalOcean, 1 Gb instance.
 
 In the box:
 - Secured user, disabled root ssh login
-- API Node.js back-end (foobar-api-dev)
+- API Node.js back-end (foobar/api-dev)
 - Redis for API back-end
 - UI supplying Node.js back-end
 - Nginx setup as proxy for both Node.js servers and for
@@ -34,8 +34,8 @@ ssh web@$foobar.com "journalctl -f"
 
 add to your Git kind of: 
 ```sh
-git remote add vps ssh://web@foobar.com/www/foobar-api-dev.git
-git remote add vps ssh://web@foobar.com/www/foobar-ui-dev.git
+git remote add vps ssh://web@foobar.com/www/webapp/foobar/api-dev.git
+git remote add vps ssh://web@foobar.com/www/webapp/foobar/ui-dev.git
 ```
 
 and just push to master:
@@ -240,7 +240,7 @@ chmod +x post-receive
 
 ###locally: 
 ```
-git remote add dev ssh://web@web.dev.foobar.com/www/foobar-ui-dev.git
+git remote add dev ssh://web@web.dev.foobar.com/www/webapp/foobar/ui-dev.git
 ```
 
 nginx
