@@ -1,0 +1,2 @@
+#!/bin/sh
+redis-cli -h <ip-or-host> -a <auth-token> -p 6379

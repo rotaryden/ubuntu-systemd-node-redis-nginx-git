@@ -1,109 +1,48 @@
-Description
-=======================
-Here is Ubuntu 15.04 server setup from scratch. Hope it woud be useful.
-
-Tested on DigitalOcean, 1 Gb instance.
-
-In the box:
-- Secured user, disabled root ssh login
-- API Node.js back-end (foobar/api-dev)
-- Redis for API back-end
-- UI supplying Node.js back-end
-- Nginx setup as proxy for both Node.js servers and for
-static content loading
-- git deployments with hook scripts
-- systemd service files to run Node.js continuosly 
-(like forever or pm2 do, but with native OS means)
-
-##What to change:
-
-- Replace "foobar" with your domain
-- Replace user name "web" to what you like,
-or better to some hardly figuring name
-
-##Management:
-to ssh: 
-```sh
-ssh web@$foobar.com
-```
-
-to view logs: 
-```sh
-ssh web@$foobar.com "journalctl -f"
-```
-
-add to your Git kind of: 
-```sh
-git remote add vps ssh://web@foobar.com/www/webapp/foobar/api-dev.git
-git remote add vps ssh://web@foobar.com/www/webapp/foobar/ui-dev.git
-```
-
-and just push to master:
-
-```sh
-git push vps master
-```
-
-it will update server instance automatically in post-receive hook
-
-
-
-##Details
-
+###$1=username, 
 ###basic setup
 
-```sh
-adduser web
-```
+USERNAME=$1
+
+adduser $USERNAME
 
 ###to make super user or just add to another group
-```sh
-gpasswd -a web sudo
-```
+gpasswd -a $USERNAME sudo
 
 ###make ownership of directories
 
-```sh
 mkdir /www
-chown -R web:web /www
-```
-
-###change password
-```sh
-passwd 
-```
+chown -R $USERNAME:$USERNAME /www
 
 ###allow systemctl under the non-root 
-```sh
 visudo
 
-web ALL = NOPASSWD: /bin/systemctl status webapp-*-*-*.service, NOPASSWD: /bin/systemctl *start webapp-*-*-*.service
-```
+USERNAME ALL = NOPASSWD: /bin/systemctl status webapp-*-*-*.service, NOPASSWD: /bin/systemctl *start webapp-*-*-*.service
+### [optional] Restrict members of group sudo to execute only restricted set of commands
+%sudo   ALL = /bin/systemctl * webapp-*-*-*, /bin/ls *  
 
 ###root login remote shell
-```sh
-nano /etc/ssh/sshd_config
-
+cat << EOF >> /etc/ssh/sshd_config
 PermitRootLogin no
+EOF
 
 service ssh restart
-```
 
 ###locales
 
-```sh
-locale-gen en_US en_US.UTF-8
+locale-gen --purge en_US en_US.UTF-8
 dpkg-reconfigure locales 
-```
+cat << EOF >> /etc/environment
+LC_ALL="en_US.UTF-8"
+EOF
 
 ###software
-```sh
 su - web
 
 sudo apt-get update
 sudo apt-get upgrade
 
-sudo apt-get install git nginx software-properties-common build-essential python-software-properties gcc-4.8 g++-4.8
+sudo apt-get install git nginx fail2ban software-properties-common build-essential python-software-properties gcc-4.8 g++-4.8
+
 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-4.8
 
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.2/install.sh | bash
@@ -234,7 +173,7 @@ echo
 ###the same for another hook
 
 
-```
+```sh
 chmod +x post-receive
 ```
 
@@ -255,34 +194,34 @@ server {
     listen 80;
     listen [::]:80;
 
-    server_name yourserver.com;
+    server_name foobar.com;
 
     location ~ ^/(robots.txt|humans.txt) {
-        root /www/foobar-ui-dev/public;
+        root /www/webapp/foobar/ui-dev/public;
     }
 
     location /public/ {
       rewrite ^/public/(.*)$ /dist/$1 break;
-      root /www/foobar-ui-dev;
+      root /www/webapp/foobar/ui-dev;
       access_log off;
       expires -1;
     }
 
     location /assets/ {
-      root /www/foobar-ui-dev;
+      root /www/webapp/foobar/ui-dev;
       access_log off;
       expires -1;
     }
 
     location /dev/ {
-        root /www/foobar-api-dev;
+        root /www/webapp/foobar/api-dev;
         expires -1;
         proxy_pass http://127.0.0.1:3000/dev/;
     }
 
 
     location /swagger/ {
-        root /www/foobar-api-dev;
+        root /www/webapp/foobar/api-dev;
         expires -1;
         proxy_connect_timeout 159s;
         proxy_send_timeout   600;
@@ -291,7 +230,7 @@ server {
     }
 
     location /api/ {
-        root /www/foobar-api-dev;
+        root /www/webapp/foobar/api-dev;
         expires -1;
         proxy_pass http://127.0.0.1:3000/api/;
         proxy_http_version 1.1;
@@ -307,7 +246,7 @@ server {
     }
 
    location / {
-        root /www/foobar-ui-dev;
+        root /www/webapp/foobar/ui-dev;
         expires -1;
         proxy_pass http://127.0.0.1:8000/;
         proxy_http_version 1.1;
@@ -322,6 +261,29 @@ server {
         proxy_redirect off;
     }
 
+}
+
+server {
+    listen 3000;
+
+    server_name foobar.me;
+
+
+    location / {
+        root /www/webapp/foobar/mongoclient;
+        expires -1;
+        proxy_pass http://127.0.0.1:8001/;
+        proxy_http_version 1.1;
+        proxy_connect_timeout 159s;
+        proxy_send_timeout   600;
+        proxy_read_timeout   600;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_cache_bypass $http_upgrade;
+        proxy_redirect off;
+    }
 }
 ```
 
@@ -387,6 +349,9 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 ```
 
+###correct permissions for systemctl services
+chmod 664 /etc/systemd/system/webapp*.service
+ 
 ###enabling 
 
 systemctl enable foobar-ui-dev.service
@@ -399,6 +364,117 @@ systemctl restart foobar-ui-dev.service
 ###changing
 
 systemctl daemon-reload
+
+MongoDB
+-------------------
+```sh
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+sudo echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+sudo apt-get update
+sudo apt-get install -y --allow-unauthenticated mongodb-org
+
+sudo nano /etc/systemd/system/mongodb.service
+```
+[Unit]
+Description=High-performance, schema-free document-oriented database
+After=network.target
+
+[Service]
+User=mongodb
+ExecStart=/usr/bin/mongod --quiet --config /etc/mongod.conf
+
+[Install]
+WantedBy=multi-user.target
+```
+sudo chmod 664 /etc/systemd/system/mongodb.service
+sudo systemctl start mongodb
+```
+
+###in case UFW is used
+sudo ufw allow from your_other_server_ip/32 to any port 27017  
+sudo ufw status
+
+###superuser
+
+mongo
+
+use admin
+
+```javascript
+db.createUser(
+  {
+    user: "grandis",
+    pwd: "dddd",
+    roles: [
+              { role: "userAdminAnyDatabase", db: "admin" },
+              { role: "readWriteAnyDatabase", db: "admin" },
+              { role: "dbAdminAnyDatabase", db: "admin" },
+              { role: "clusterAdmin", db: "admin" }
+           ]
+  }
+)
+```
+
+
+###activate authmodels
+
+nano /etc/mongod.conf
+```
+security:
+  authorization: enabled
+```
+
+###create regular DB user
+mongo -u superuser -p --authenticationDatabase admin
+
+use admin
+
+```javascript
+db.createUser(
+  {
+    user: "web",
+    pwd: "ooo",
+    roles: [
+              { role: "readWrite", db: "onsite" },
+           ]
+  }
+)
+```
+
+###use this user
+mongo -u web -p --authenticationDatabase admin
+
+
+##MongoClient setup
+curl https://install.meteor.com/ | sh
+cd /www/webapp/foobar
+git clone https://github.com/rsercano/mongoclient.git mongoclient
+cd mongoclient
+
+cat << EOF > run-prod
+#!/usr/bin/env bash
+
+export MONGOCLIENT_AUTH=true
+export MONGOCLIENT_USERNAME=yourlogin
+export MONGOCLIENT_PASSWORD=yourpass
+
+meteor run -p 8001
+
+sudo nano /etc/systemd/system/webapp-foobar-mongoclient-prod.service
+[Service]
+ExecStart=/www/webapp/foobar/mongoclient/run-prod
+SyslogIdentifier=webapp-foobar-mongoclient-prod
+WorkingDirectory=/www/webapp/foobar/mongoclient
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+User=versi
+Group=versi
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+
 
 
 redis 
@@ -415,23 +491,13 @@ ifconfig
 
 eth0      Link encap:Ethernet  HWaddr 04:01:9a:55:fd:01  
           inet addr:159.203.64.119  Bcast:159.203.79.255  Mask:255.255.240.0
-          inet6 addr: fe80::601:9aff:fe55:fd01/64 Scope:Link
-          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
-          RX packets:74014 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:17143 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:1000 
-          RX bytes:94890732 (94.8 MB)  TX bytes:2444153 (2.4 MB)
+          ...
 
 eth1      Link encap:Ethernet  HWaddr 04:01:9a:55:fd:02  
 
           inet addr: >>>>>> 10.132.1.187 <<<<<<<<  Bcast:10.132.255.255  Mask:255.255.0.0
 
-          inet6 addr: fe80::601:9aff:fe55:fd02/64 Scope:Link
-          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
-          RX packets:8 errors:0 dropped:0 overruns:0 frame:0
-          TX packets:7 errors:0 dropped:0 overruns:0 carrier:0
-          collisions:0 txqueuelen:1000 
-          RX bytes:648 (648.0 B)  TX bytes:578 (578.0 B)
+          ...
 
 
 vim /etc/redis/redis.conf
