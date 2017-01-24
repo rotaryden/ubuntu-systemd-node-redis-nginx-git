@@ -16,9 +16,23 @@ chown -R $USERNAME:$USERNAME /www
 ###allow systemctl under the non-root 
 visudo
 
+```sh
+
+# this line is need for autodeploy scripts, allow only [re]start systemctl commands to run with no password
 USERNAME ALL = NOPASSWD: /bin/systemctl status webapp-*-*-*.service, NOPASSWD: /bin/systemctl *start webapp-*-*-*.service
-### [optional] Restrict members of group sudo to execute only restricted set of commands
+
+# [optional] Restrict members of group sudo to execute only restricted set of commands
 %sudo   ALL = /bin/systemctl * webapp-*-*-*, /bin/ls *  
+# OR, alternatively and less strict,
+%sudo ALL=!/bin/su, !/usr/bin/sudo -s, !/usr/bin/passwd root
+
+# User privilege specification - only root has full access
+root    ALL=(ALL:ALL) ALL
+
+# And not adin group - comment it out
+# %admin ALL=(ALL) ALL
+
+```
 
 ###root login remote shell
 cat << EOF >> /etc/ssh/sshd_config
