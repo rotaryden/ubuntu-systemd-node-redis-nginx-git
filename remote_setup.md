@@ -1,19 +1,18 @@
-###$1=username, 
-###basic setup
+### basic setup
 
 USERNAME=$1
 
 adduser $USERNAME
 
-###to make super user or just add to another group
+### to make super user or just add to another group
 gpasswd -a $USERNAME sudo
 
-###make ownership of directories
+### make ownership of directories
 
 mkdir /www
 chown -R $USERNAME:$USERNAME /www
 
-###allow systemctl under the non-root 
+### allow systemctl under the non-root 
 visudo
 
 ```sh
@@ -34,22 +33,28 @@ root    ALL=(ALL:ALL) ALL
 
 ```
 
-###root login remote shell
+### root login remote shell
+```sh
 cat << EOF >> /etc/ssh/sshd_config
 PermitRootLogin no
 EOF
+```
 
 service ssh restart
 
-###locales
+### locales
 
+```sh
 locale-gen --purge en_US en_US.UTF-8
 dpkg-reconfigure locales 
 cat << EOF >> /etc/environment
 LC_ALL="en_US.UTF-8"
 EOF
+```
 
-###software
+### software
+
+```sh
 su - web
 
 sudo apt-get update
@@ -62,14 +67,16 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 60 --slave 
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.2/install.sh | bash
 
 . ~/.bashrc
+```
 
-#install latest node, or change to specific version in your package.json
+### Node.js
+
+```sh
 nvm install node
-
 npm install -g gulp
 ```
 
-##git
+## git
 
 ```sh
 cd /www
@@ -86,8 +93,8 @@ cd hooks
 cat > post-receive
 ```
 
-###hooks
-####Only one hook shown here, second one is similar
+### hooks
+#### Only one hook shown here, second one is similar
 
 ```sh
 #!/bin/sh
@@ -184,20 +191,21 @@ echo DONE.
 echo
 ```
 
-###the same for another hook
+### the same for another hook
 
 
 ```sh
 chmod +x post-receive
 ```
 
-###locally: 
+### locally: 
 ```
 git remote add dev ssh://web@web.dev.foobar.com/www/webapp/foobar/ui-dev.git
 ```
 
 nginx
 ------------------------------
+
 ```sh
 systemctl enable nginx
 
@@ -363,24 +371,26 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 ```
 
-###correct permissions for systemctl services
+### correct permissions for systemctl services
+
 chmod 664 /etc/systemd/system/webapp*.service
  
-###enabling 
+### enabling 
 
 systemctl enable foobar-ui-dev.service
 systemctl enable foobar-api-dev.service
 systemctl enable foobar-queue-dev.service
 
-###starting 
+### starting 
 systemctl restart foobar-ui-dev.service
 
-###changing
+### changing
 
 systemctl daemon-reload
 
 MongoDB
 -------------------
+
 ```sh
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
 sudo echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
@@ -404,11 +414,11 @@ sudo chmod 664 /etc/systemd/system/mongodb.service
 sudo systemctl start mongodb
 ```
 
-###in case UFW is used
+### in case UFW is used
 sudo ufw allow from your_other_server_ip/32 to any port 27017  
 sudo ufw status
 
-###superuser
+### superuser
 
 mongo
 
@@ -430,7 +440,7 @@ db.createUser(
 ```
 
 
-###activate authmodels
+### activate authmodels
 
 nano /etc/mongod.conf
 ```
@@ -438,7 +448,7 @@ security:
   authorization: enabled
 ```
 
-###create regular DB user
+### create regular DB user
 mongo -u superuser -p --authenticationDatabase admin
 
 use admin
@@ -455,11 +465,13 @@ db.createUser(
 )
 ```
 
-###use this user
+### use this user
 mongo -u web -p --authenticationDatabase admin
 
 
-##MongoClient setup
+## MongoClient setup
+
+```sh
 curl https://install.meteor.com/ | sh
 cd /www/webapp/foobar
 git clone https://github.com/rsercano/mongoclient.git mongoclient
@@ -471,10 +483,12 @@ cat << EOF > run-prod
 export MONGOCLIENT_AUTH=true
 export MONGOCLIENT_USERNAME=yourlogin
 export MONGOCLIENT_PASSWORD=yourpass
+```
 
 meteor run -p 8001
 
 sudo nano /etc/systemd/system/webapp-foobar-mongoclient-prod.service
+```sh
 [Service]
 ExecStart=/www/webapp/foobar/mongoclient/run-prod
 SyslogIdentifier=webapp-foobar-mongoclient-prod
@@ -488,15 +502,17 @@ Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
-
+```
 
 
 redis 
 ---------------------------
+
 ```sh
 add-apt-repository ppa:chris-lea/redis-server
 apt-get update
 apt-get install redis-server
+```
 
 redis-cli ping
 #>> PONG
@@ -516,17 +532,21 @@ eth1      Link encap:Ethernet  HWaddr 04:01:9a:55:fd:02
 
 vim /etc/redis/redis.conf
 
+```sh
 bind localhost 10.132.1.187  -- to restrict only to withing-vps calls
 #bind -- to allow calls from external net
 
 requirepass pass
+```
 
 
+```sh
 systemctl restart redis-server
 ```
+
 Tools
 -----------------
 
-###display port
+### display port
 netstat -tulpn
 
