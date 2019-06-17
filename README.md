@@ -1,4 +1,4 @@
-#Ubuntu Server complex setup for Node.js back-ends
+# Ubuntu Server complex setup for Node.js back-ends
 
 Example detailed configuration for Ubuntu Server from scratch, using
 - Secured user, disabled root ssh login
@@ -30,13 +30,12 @@ static content loading
 - systemd service files to run Node.js continuosly 
 (like forever or pm2 do, but with native OS means)
 
-##What to change:
+## What to change:
 
 - Replace "foobar" with your domain
-- Replace user name "web" to what you like,
-or better to some hardly figuring name
+- Replace user name "web" to your one, better some hardly-guessing name
 
-##Management:
+## Management:
 to ssh: 
 ```sh
 ssh web@$foobar.com
@@ -64,6 +63,6 @@ it will update server instance automatically in post-receive hook
 
 
 
-##LICENSE
+## LICENSE
 
 MIT
